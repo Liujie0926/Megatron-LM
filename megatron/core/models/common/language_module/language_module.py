@@ -206,27 +206,22 @@ class LanguageModule(MegatronModule):
             elif self.config.cross_entropy_fusion_impl == 'native':
                 loss = fused_vocab_parallel_cross_entropy(logits, labels, self.pg_collection.tp)
         else:
-            loss = tensor_parallel.vocab_parallel_cross_entropy(
-                logits, labels, tp_group=self.tp_group
-            )
+            if _use_accuracy_compatible():
+                s, b = labels.shape
+                loss = torch.nn.functional.cross_entropy(
+                    logits.float().reshape(s * b, -1),  # [s*b, vocab]
+                    labels.reshape(s * b),  # [s*b]
+                    reduction='none',
+                ).reshape(
+                    s, b
+                )  # [s, b]
+            else:
+                loss = tensor_parallel.vocab_parallel_cross_entropy(
+                    logits, labels, tp_group=self.tp_group
+                )
 
         # [s b] => [b, s]
         loss = loss.transpose(0, 1).contiguous()
-
-        if _use_accuracy_compatible():
-            # 精度对齐锚点 1（对应 PF language_loss.py forward_impl 里的 per_token_loss）：
-            # CE 直出、mask/归一化前的 per-token loss，两侧语义唯一。
-            # 注意：CP > 1 时这里仍是本 rank 的 sequence shard，需与 PF 侧
-            # ContextParallelGatherOp 之后的全量 shape 区分。
-            import hashlib as _hashlib
-
-            _l = loss.detach().float().contiguous()
-            print(
-                f"\nper_token_loss: rank={torch.distributed.get_rank()} "
-                f"shape={list(_l.shape)} "
-                f"md5={_hashlib.md5(_l.cpu().numpy().tobytes()).hexdigest()}",
-                flush=True,
-            )
         return loss
 
     def setup_embeddings_and_output_layer(self) -> None:
