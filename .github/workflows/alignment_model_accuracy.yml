@@ -134,7 +134,6 @@ jobs:
           conda activate py_$python_version
           python --version
           ldconfig
-
           source $work_dir/../../../proxy
           export PROXY_URL="${http_proxy}"
           export PADDLEFLEET_WHEEL_PATH="/workspace/paddlefleet-0.0.0-py3-none-linux_x86_64.whl"
