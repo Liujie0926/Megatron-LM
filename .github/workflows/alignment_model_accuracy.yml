@@ -123,7 +123,9 @@ jobs:
 
           echo "::group::Build megatron-core wheel"
           cd /workspace/Megatron-LM
-          bash scripts/dependence/build.sh
+          # bash scripts/dependence/build.sh
+          wget -q https://paddle-github-action.bj.bcebos.com/whl/megatron_core-0.0.0-cp312-cp312-linux_x86_64.whl
+          mv megatron_core-0.0.0-cp312-cp312-linux_x86_64.whl /workspace/upload/
           ls -l /workspace/upload/
           echo "::endgroup::"
           '
