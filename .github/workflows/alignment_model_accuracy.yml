@@ -124,6 +124,7 @@ jobs:
 
           echo "::group::Build megatron-core wheel"
           cd /workspace/Megatron-LM
+          pip config set global.cache-dir "/home/.cache/pip"
           bash scripts/dependence/build.sh
           ls -l /workspace/upload/
           echo "::endgroup::"
